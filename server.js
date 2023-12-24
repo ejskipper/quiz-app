@@ -11,22 +11,62 @@ let startTime;
 let scores = {};
 let answeredWords = {};
 let logs = [];
-let questionNumber = 1;
+let questionNumber = 0;
+
+const emojis = [
+  "&#127877;",
+  "&#129334;",
+  "&#127876;",
+  "&#129420;",
+  "&#127873;",
+  "&#9731;",
+  "&#10052;",
+];
 
 app.use(express.static(path.join(__dirname, "public")));
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.post("/reset", (req, res) => {
-  let secretWord = "";
-  let startTime;
-  let scores = {};
-  let answeredWords = {};
-  let logs = [];
-  let questionNumber = 1;
+  secretWord = "";
+  startTime;
+  scores = {};
+  answeredWords = {};
+  logs = [];
+  questionNumber = 0;
+
+  res.send("OK");
 });
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+app.get("/scores", (req, res) => {
+  scoresHtml = Object.keys(scores)
+    .map((player) => {
+      return `<h4>${player} - ${scores[player]}</h4>`;
+    })
+    .join("");
+
+  pageHtml = `<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Christmas Quiz 2023!</title>
+       
+        <script defer src="script.js"></script>
+    </head>
+    <body class="m-3">
+        <h1><img src="https://cdn.pixabay.com/photo/2016/11/20/00/03/holly-1841718_1280.png" height="100">Welcome to Ellen's Christmas Quiz 2023!</h1>
+        <h3>Thanks for playing! And the scores are....</h3>
+        <br>
+        ${scoresHtml}
+    </body>
+    </html>`;
+
+  res.send(pageHtml);
 });
 
 app.post("/setSecret", (req, res) => {
@@ -55,7 +95,10 @@ app.post("/makeGuess", (req, res) => {
   } else if (cleanAndCompareStrings(guess, secretWord)) {
     handleCorrectGuess(res, playerName);
   } else {
-    res.send("Incorrect guess. Try again!");
+    res.send(
+      emojis[Math.floor(Math.random() * emojis.length)] +
+        " Incorrect guess. Try again!"
+    );
   }
 });
 
@@ -89,11 +132,11 @@ function handleCorrectGuess(res, playerName) {
   answeredWords[playerName] ||= [];
   answeredWords[playerName] = answeredWords[playerName] + secretWord;
 
-  let message = `${playerName}, you're correct! &#127881; Your score for this round is ${score}; your total score is now ${scores[playerName]}`;
+  let message = `${playerName}, you're correct! &#127881; Your score for this question is ${score}; your total score is now ${scores[playerName]}`;
 
-  const isLastPlayer = !Object.values(answeredWords).some(
-    (words) => !words.includes(secretWord)
-  );
+  const isLastPlayer =
+    (questionNumber >= 2 || Object.keys(scores).length >= 7) &&
+    !Object.values(answeredWords).some((words) => !words.includes(secretWord));
 
   if (isLastPlayer) {
     message += ". YOU ARE THE LAST PLAYER, MOVE ON!";
